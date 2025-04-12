@@ -1,10 +1,7 @@
-create table tourist_categories
-(
-    id   integer generated always as identity primary key,
-    name varchar(50) not null check (name in ('vacationer', 'cargo_tourist', 'child'))
-);
-
-
+/*
+ * Основна таблиця інформації про туристів.
+ * Для дітей вказується батько (parent_id).
+ */
 create table tourists
 (
     id                        integer generated always as identity primary key,
@@ -13,22 +10,26 @@ create table tourists
     gender                    varchar(6) check (gender in ('male', 'female', 'other')),
     birth_date                date check (birth_date <= current_date) not null,
     accommodation_preferences varchar(200),
-    category_id               integer references tourist_categories (id),
-    parent_id                 integer check (parent_id is null or id <> tourists.parent_id) references tourists (id)
+    category                  varchar(50)                             not null check (category in ('vacationer', 'cargo_tourist', 'child')),
+    parent_id                 integer references tourists (id) check (parent_id is null or parent_id <> id)
 );
 create index idx_tourists_passport on tourists (passport_number);
 create index idx_tourists_name on tourists (full_name);
 
-
+/*
+ * Таблиця туристичних груп.
+ */
 create table tourist_groups
 (
     id             integer generated always as identity primary key,
-    group_code     varchar(50) not null unique,
-    departure_date date        not null,
-    arrival_date   date        not null check (arrival_date > tourist_groups.departure_date)
+    departure_date date not null,
+    arrival_date   date not null check (arrival_date > departure_date)
 );
 
-
+/*
+ * Таблиця зв'язків між групами та туристами.
+ * Кожен турист може належати до однієї або кількох груп.
+ */
 create table group_members
 (
     group_id   integer references tourist_groups (id),
@@ -36,16 +37,13 @@ create table group_members
     primary key (group_id, tourist_id)
 );
 
-
-create table country_visits
-(
-    tourist_id integer not null references tourists (id),
-    entry_date date    not null,
-    exit_date  date    not null,
-    primary key (tourist_id, entry_date)
-);
-
+/* Тип для статусів віз: очікує, схвалено, відхилено */
 create type visa_status as enum ('pending', 'approved', 'rejected');
+
+/*
+ * Візові документи туристів.
+ * Містить інформацію про видані візи, їх тип та термін дії.
+ */
 create table visa_documents
 (
     document_number varchar(50) primary key,
@@ -56,7 +54,23 @@ create table visa_documents
     status          visa_status not null
 );
 
+/*
+ * Історія відвідувань країни туристами.
+ * Фіксує дати в'їзду та виїзду для кожного туриста.
+ */
+create table country_visits
+(
+    tourist_id  integer     not null references tourists (id),
+    entry_date  date        not null,
+    exit_date   date        not null check (entry_date < country_visits.exit_date),
+    visa_number varchar(50) not null references visa_documents (document_number),
+    primary key (tourist_id, entry_date)
+);
 
+/*
+ * Інформація про вантажі туристів.
+ * Включає маркування, вагу, кількість місць та вартість послуг.
+ */
 create table cargo
 (
     id             integer generated always as identity primary key,
@@ -71,20 +85,26 @@ create table cargo
         ) stored
 );
 
-
+/*
+ * Таблиця рейсів.
+ * Містить інформацію про перельоти, аеропорти та вартість квитків.
+ */
 create table flights
 (
     id                integer generated always as identity primary key,
     flight_number     varchar(20)    not null unique,
     departure_date    date           not null,
-    arrival_date      date           not null,
+    arrival_date      date           not null check (arrival_date > flights.departure_date),
     departure_airport varchar(100),
     arrival_airport   varchar(100),
     price_per_ticket  numeric(10, 2) not null
 );
 create index idx_flights_dates on flights (departure_date, arrival_date);
 
-
+/*
+ * Зв'язок між рейсами та вантажами.
+ * Визначає, які вантажі перевозяться якими рейсами.
+ */
 create table flight_cargo
 (
     flight_id integer not null references flights (id),
@@ -92,25 +112,34 @@ create table flight_cargo
     unique (flight_id, cargo_id)
 );
 
-
+/*
+ * Пасажири рейсів.
+ * Визначає, які туристи летять якими рейсами та їхні місця.
+ */
 create table flight_passengers
 (
-    flight_id  integer not null references flights (id),
-    tourist_id integer not null references tourists (id),
-    seat       varchar(10),
-    unique (flight_id, tourist_id)
+    flight_id  integer     not null references flights (id),
+    tourist_id integer     not null references tourists (id),
+    seat       varchar(10) not null,
+    primary key (flight_id, tourist_id)
 );
 
-
+/*
+ * Довідник готелів.
+ * Містить контактну інформацію та адреси готелів.
+ */
 create table hotels
 (
     id      integer generated always as identity primary key,
-    name    varchar(100) not null,
+    name    varchar(100) not null unique,
     address varchar(200),
     phone   varchar(50)
 );
 
-
+/*
+ * Бронювання готелів.
+ * Містить інформацію про номери, ціни та дати заселення.
+ */
 create table hotel_bookings
 (
     id              integer generated always as identity primary key,
@@ -121,15 +150,20 @@ create table hotel_bookings
     check_out_date  date           not null check (check_out_date > check_in_date)
 );
 
-
+/*
+ * Зв'язок між туристами та їх бронюваннями готелів.
+ */
 create table tourists_hotel_bookings
 (
     tourist_id       integer references tourists (id),
     hotel_booking_id integer references hotel_bookings (id),
-    unique (tourist_id, hotel_booking_id)
+    primary key (tourist_id, hotel_booking_id)
 );
 
-
+/*
+ * Каталог екскурсій.
+ * Містить опис, дати проведення, ціни та інформацію про організаторів.
+ */
 create table excursions
 (
     id             integer generated always as identity primary key,
@@ -139,8 +173,12 @@ create table excursions
     price          numeric(10, 2) not null check (price >= 0),
     agency_name    varchar(100)
 );
-create index dx_excursions_date on excursions (excursion_date);
+create index idx_excursions_date on excursions (excursion_date);
 
+/*
+ * Учасники екскурсій.
+ * Визначає, які туристи беруть участь у яких екскурсіях.
+ */
 create table excursion_participants
 (
     tourist_id   integer not null references tourists (id),
@@ -148,14 +186,22 @@ create table excursion_participants
     unique (tourist_id, excursion_id)
 );
 
-
+/*
+ * Витрати, пов'язані з туристами.
+ * Фіксує додаткові витрати з описом їх призначення.
+ */
 create table expenses
 (
+    id          integer generated always as identity primary key,
     tourist_id  integer      not null references tourists (id),
     expense     numeric(10, 2) default 0,
     description varchar(100) not null
 );
 
+/*
+ * Фінансові звіти представництва.
+ * Агрегує всі витрати за групами туристів за певний період.
+ */
 create table financial_reports
 (
     id                integer generated always as identity primary key,
