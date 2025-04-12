@@ -50,7 +50,7 @@ create table visa_documents
     tourist_id      integer     not null references tourists (id),
     issue_date      date        not null,
     expiry_date     date        not null,
-    visa_type       varchar(50) not null check (visa_type in ('tourist', 'business', 'child-dependent')),
+    visa_type       varchar(50) not null,
     status          visa_status not null
 );
 
@@ -94,7 +94,7 @@ create table flights
     id                integer generated always as identity primary key,
     flight_number     varchar(20)    not null unique,
     departure_date    date           not null,
-    arrival_date      date           not null check (arrival_date > flights.departure_date),
+    arrival_date      date           not null check (arrival_date >= flights.departure_date),
     departure_airport varchar(100),
     arrival_airport   varchar(100),
     price_per_ticket  numeric(10, 2) not null
@@ -204,14 +204,16 @@ create table expenses
  */
 create table financial_reports
 (
-    id                integer generated always as identity primary key,
-    report_date       date not null,
-    tourist_group     integer references tourist_groups (id),
-    hotel_expense     numeric(10, 2) default 0,
-    flight_expense    numeric(10, 2) default 0,
-    excursion_expense numeric(10, 2) default 0,
-    other_expense     numeric(10, 2) default 0,
-    total_expense     numeric(10, 2) generated always as (
+    id                INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    report_date       DATE NOT NULL,
+    tourist_group     INTEGER REFERENCES tourist_groups (id),
+    category          VARCHAR(50) CHECK (category IN ('vacationer', 'cargo_tourist', 'child', 'total')),
+    hotel_expense     NUMERIC(10, 2) DEFAULT 0,
+    flight_expense    NUMERIC(10, 2) DEFAULT 0,
+    excursion_expense NUMERIC(10, 2) DEFAULT 0,
+    other_expense     NUMERIC(10, 2) DEFAULT 0,
+    total_expense     NUMERIC(10, 2) GENERATED ALWAYS AS (
         hotel_expense + flight_expense + excursion_expense + other_expense
-        ) stored
+        ) STORED,
+    UNIQUE (tourist_group, category)
 );
