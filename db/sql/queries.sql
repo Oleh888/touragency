@@ -1,4 +1,4 @@
--- Для вибірки всіх туристів
+-- 1. Для вибірки всіх туристів
 SELECT t.id,
        t.passport_number,
        t.full_name,
@@ -14,7 +14,7 @@ FROM tourists t
          LEFT JOIN cargo c ON t.id = c.tourist_id
 ORDER BY t.full_name;
 
--- Для вибірки конкретної категорії (наприклад, 'cargo_tourist')
+-- 2. Для вибірки конкретної категорії (наприклад, 'cargo_tourist')
 SELECT t.id,
        t.passport_number,
        t.full_name,
@@ -32,7 +32,7 @@ WHERE t.category = 'cargo_tourist'
 ORDER BY t.full_name;
 
 
--- Списки на розселення для всіх готелів
+-- 3. Списки на розселення для всіх готелів
 SELECT h.name                        AS hotel_name,
        hb.room_number,
        COUNT(thb.tourist_id)         AS tourists_count,
@@ -44,7 +44,7 @@ FROM hotels h
 GROUP BY h.name, hb.room_number
 ORDER BY h.name, hb.room_number;
 
--- Списки на розселення для конкретного готелю та категорії
+-- 4. Списки на розселення для конкретного готелю та категорії
 SELECT h.name                        AS hotel_name,
        hb.room_number,
        COUNT(thb.tourist_id)         AS tourists_count,
@@ -59,19 +59,19 @@ GROUP BY h.name, hb.room_number
 ORDER BY h.name, hb.room_number;
 
 
--- Загальна кількість
+-- 5. Загальна кількість
 SELECT COUNT(DISTINCT cv.tourist_id) AS tourists_count
 FROM country_visits cv
 WHERE cv.entry_date BETWEEN '2023-01-01' AND '2023-12-31';
 
--- Для конкретної категорії
+-- 6. Для конкретної категорії
 SELECT COUNT(DISTINCT cv.tourist_id) AS tourists_count
 FROM country_visits cv
          JOIN tourists t ON cv.tourist_id = t.id
 WHERE cv.entry_date BETWEEN '2023-01-01' AND '2023-12-31'
   AND t.category = 'vacationer';
 
--- Відомості про конкретного туриста
+-- 7. Відомості про конкретного туриста
 SELECT t.full_name,
        t.passport_number,
        (SELECT COUNT(*) FROM country_visits WHERE tourist_id = 1) AS visits_count,
@@ -94,7 +94,7 @@ FROM tourists t
 WHERE t.id = 1;
 
 
--- Список готелів з кількістю номерів
+-- 8. Список готелів з кількістю номерів
 SELECT h.name                         AS hotel_name,
        COUNT(DISTINCT hb.room_number) AS rooms_count,
        COUNT(thb.tourist_id)          AS tourists_count
@@ -106,14 +106,14 @@ GROUP BY h.name
 ORDER BY tourists_count DESC;
 
 
--- Кількість туристів, що замовили екскурсії
+-- 9. Кількість туристів, що замовили екскурсії
 SELECT COUNT(DISTINCT ep.tourist_id) AS tourists_with_excursions
 FROM excursion_participants ep
          JOIN excursions e ON ep.excursion_id = e.id
 WHERE e.excursion_date BETWEEN '2023-01-01' AND '2023-12-31';
 
 
--- Популярні екскурсії та агентства
+-- 10. Популярні екскурсії та агентства
 SELECT e.title                AS excursion,
        e.agency_name          AS agency,
        COUNT(ep.tourist_id)   AS participants_count,
@@ -124,7 +124,7 @@ GROUP BY e.title, e.agency_name
 ORDER BY participants_count DESC LIMIT 10;
 
 
--- Завантаження рейсу
+-- 11. Завантаження рейсу
 SELECT f.flight_number,
        f.departure_date,
        COUNT(DISTINCT fp.tourist_id)    AS passengers_count,
@@ -139,7 +139,7 @@ WHERE f.flight_number = 'AF5679'
 GROUP BY f.flight_number, f.departure_date;
 
 
--- Статистика вантажообігу
+-- 12. Статистика вантажообігу
 SELECT COUNT(DISTINCT c.id)                                           AS cargo_items_count,
        SUM(c.total_weight)                                            AS total_weight,
        COUNT(DISTINCT fc.flight_id)                                   AS flights_count,
@@ -154,7 +154,7 @@ WHERE c.tourist_id IN (SELECT id
   AND f.departure_date BETWEEN '2023-01-01' AND '2023-12-31';
 
 
--- Фінансовий звіт для всієї групи
+-- 13. Фінансовий звіт для всієї групи
 SELECT fr.report_date,
        tg.departure_date,
        tg.arrival_date,
@@ -167,7 +167,7 @@ FROM financial_reports fr
          JOIN tourist_groups tg ON fr.tourist_group = tg.id
 WHERE fr.tourist_group = 2;
 
--- Фінансовий звіт для конкретної категорії
+-- 14. Фінансовий звіт для конкретної категорії
 SELECT fr.report_date,
        tg.departure_date,
        tg.arrival_date,
@@ -182,7 +182,7 @@ WHERE fr.tourist_group = 1
   AND fr.category = 'vacationer';
 
 
--- Витрати та доходи за період
+-- 15. Витрати та доходи за період
 SELECT 'Готелі'                                                         AS category,
        SUM(hb.price_per_night * (hb.check_out_date - hb.check_in_date)) AS total
 FROM hotel_bookings hb
@@ -210,7 +210,7 @@ WHERE EXISTS (SELECT 1
                 AND f.departure_date BETWEEN '2023-01-01' AND '2023-12-31');
 
 
--- Статистика за видами вантажу
+-- 16. Статистика за видами вантажу
 SELECT UNNEST(c.marks)                                           AS cargo_type,
        COUNT(*)                                                  AS items_count,
        SUM(c.total_weight)                                       AS total_weight,
@@ -220,7 +220,7 @@ GROUP BY cargo_type
 ORDER BY total_weight DESC;
 
 
--- Відомості про туристів рейсу
+-- 17. Відомості про туристів рейсу
 SELECT t.id                                                           AS tourist_id,
        t.full_name,
        t.passport_number,
