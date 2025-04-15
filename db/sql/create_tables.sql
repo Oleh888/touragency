@@ -11,7 +11,7 @@ create table tourists
     birth_date                date check (birth_date <= current_date) not null,
     accommodation_preferences varchar(200),
     category                  varchar(50)                             not null check (category in ('vacationer', 'cargo_tourist', 'child')),
-    parent_id                 integer references tourists (id) check (parent_id is null or parent_id <> id)
+    parent_id                 integer references tourists (id) on delete set null check (parent_id is null or parent_id <> id)
 );
 create index idx_tourists_passport on tourists (passport_number);
 create index idx_tourists_name on tourists (full_name);
@@ -32,8 +32,8 @@ create table tourist_groups
  */
 create table group_members
 (
-    group_id   integer references tourist_groups (id),
-    tourist_id integer not null references tourists (id),
+    group_id   integer references tourist_groups (id) on delete cascade,
+    tourist_id integer not null references tourists (id) on delete cascade,
     primary key (group_id, tourist_id)
 );
 
@@ -47,7 +47,7 @@ create type visa_status as enum ('pending', 'approved', 'rejected');
 create table visa_documents
 (
     document_number varchar(50) primary key,
-    tourist_id      integer     not null references tourists (id),
+    tourist_id      integer     not null references tourists (id) on delete cascade,
     issue_date      date        not null,
     expiry_date     date        not null,
     visa_type       varchar(50) not null,
@@ -60,10 +60,10 @@ create table visa_documents
  */
 create table country_visits
 (
-    tourist_id  integer     not null references tourists (id),
+    tourist_id  integer     not null references tourists (id) on delete cascade,
     entry_date  date        not null,
     exit_date   date        not null check (entry_date < country_visits.exit_date),
-    visa_number varchar(50) not null references visa_documents (document_number),
+    visa_number varchar(50) not null references visa_documents (document_number) on delete cascade,
     primary key (tourist_id, entry_date)
 );
 
@@ -74,15 +74,13 @@ create table country_visits
 create table cargo
 (
     id             integer generated always as identity primary key,
-    tourist_id     integer        not null references tourists (id),
+    tourist_id     integer        not null references tourists (id) on delete cascade,
     marks          varchar(100) [],
     items_count    integer        not null check (items_count >= 0),
     total_weight   numeric(10, 2) not null check (total_weight >= 0),
     packaging_cost numeric(10, 2) default 0,
     insurance_cost numeric(10, 2) default 0,
-    total_cost     numeric(10, 2) generated always as (
-        packaging_cost + insurance_cost
-        ) stored
+    total_cost     numeric(10, 2) generated always as (packaging_cost + insurance_cost) stored
 );
 
 /*
@@ -107,8 +105,8 @@ create index idx_flights_dates on flights (departure_date, arrival_date);
  */
 create table flight_cargo
 (
-    flight_id integer not null references flights (id),
-    cargo_id  integer not null references cargo (id),
+    flight_id integer not null references flights (id) on delete cascade,
+    cargo_id  integer not null references cargo (id) on delete cascade,
     unique (flight_id, cargo_id)
 );
 
@@ -118,8 +116,8 @@ create table flight_cargo
  */
 create table flight_passengers
 (
-    flight_id  integer     not null references flights (id),
-    tourist_id integer     not null references tourists (id),
+    flight_id  integer     not null references flights (id) on delete cascade,
+    tourist_id integer     not null references tourists (id) on delete cascade,
     seat       varchar(10) not null,
     primary key (flight_id, tourist_id)
 );
@@ -143,7 +141,7 @@ create table hotels
 create table hotel_bookings
 (
     id              integer generated always as identity primary key,
-    hotel_id        integer        not null references hotels (id),
+    hotel_id        integer        not null references hotels (id) on delete cascade,
     room_number     varchar(20),
     price_per_night numeric(10, 2) not null,
     check_in_date   date           not null,
@@ -155,8 +153,8 @@ create table hotel_bookings
  */
 create table tourists_hotel_bookings
 (
-    tourist_id       integer references tourists (id),
-    hotel_booking_id integer references hotel_bookings (id),
+    tourist_id       integer references tourists (id) on delete cascade,
+    hotel_booking_id integer references hotel_bookings (id) on delete cascade,
     primary key (tourist_id, hotel_booking_id)
 );
 
@@ -181,8 +179,8 @@ create index idx_excursions_date on excursions (excursion_date);
  */
 create table excursion_participants
 (
-    tourist_id   integer not null references tourists (id),
-    excursion_id integer not null references excursions (id),
+    tourist_id   integer not null references tourists (id) on delete cascade,
+    excursion_id integer not null references excursions (id) on delete cascade,
     unique (tourist_id, excursion_id)
 );
 
@@ -193,7 +191,7 @@ create table excursion_participants
 create table expenses
 (
     id          integer generated always as identity primary key,
-    tourist_id  integer      not null references tourists (id),
+    tourist_id  integer      not null references tourists (id) on delete cascade,
     expense     numeric(10, 2) default 0,
     description varchar(100) not null
 );
@@ -206,7 +204,7 @@ create table financial_reports
 (
     id                INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     report_date       DATE NOT NULL,
-    tourist_group     INTEGER REFERENCES tourist_groups (id),
+    tourist_group     INTEGER REFERENCES tourist_groups (id) on delete cascade,
     category          VARCHAR(50) CHECK (category IN ('vacationer', 'cargo_tourist', 'child', 'total')),
     hotel_expense     NUMERIC(10, 2) DEFAULT 0,
     flight_expense    NUMERIC(10, 2) DEFAULT 0,
